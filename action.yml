@@ -27,6 +27,7 @@ inputs:
   registry:
     description: "The name of the docker registry to pull from."
     required: true
+    default: "ghcr.io"
 runs:
   using: "composite"
   steps:
@@ -39,7 +40,7 @@ runs:
     - name: Evaluate docker compose file
       shell: bash
       run: |
-        docker compose -f ${{ inputs.docker_compose_file }} config --no-interpolate >> ${{ runner.temp }}/docker-compose.yml
+        docker compose -f ${{ inputs.docker_compose_file }} config --no-interpolate --no-normalize --no-path-resolution >> ${{ runner.temp }}/docker-compose.yml
     - name: Deploy
       shell: bash
       run: |
