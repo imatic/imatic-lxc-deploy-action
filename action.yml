@@ -1,0 +1,52 @@
+name: "Imatic LXC Deploy"
+description: "Deploys a docker compose file to LXC container."
+inputs:
+  server:
+    description: "Hostname of the LXC server."
+    required: true
+  server_deploy_key:
+    description: "Base64 encoded SSH private key to be used for deployment."
+    required: true
+  server_jumphost:
+    description: "Hostname of the jumphost."
+    required: true
+    default: "imaticit-jumphost-prod@prod.imaticit-jumphost.dev.imatic.cz"
+  server_deploy_dir:
+    description: "Directory on the server where the project will be deployed."
+    required: true
+  project_domain_name:
+    description: "Domain name of the project."
+    required: true
+  docker_compose_file:
+    description: "The path to docker-compose file."
+    required: true
+    default: "./docker-compose.yml"
+  version:
+    description: "Image tag to be deployed."
+    required: true
+  registry:
+    description: "The name of the docker registry to pull from."
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set project env variables
+      shell: bash
+      run: |
+        echo "PROJECT_IMAGE=${{ inputs.registry }}/${{ github.repository }}" >> $GITHUB_ENV
+        PROJECT_VERSION=${{ inputs.version }} echo "PROJECT_VERSION=${PROJECT_VERSION:-$(git rev-parse --short HEAD)}" >> $GITHUB_ENV
+        echo PROJECT_SERVER_NAME=${{ inputs.project_domain_name }} >> $GITHUB_ENV
+    - name: Evaluate docker compose file
+      shell: bash
+      run: |
+        docker compose -f ${{ inputs.docker_compose_file }} config >> ${{ runner.temp }}/docker-compose.yml
+    - name: Deploy
+      shell: bash
+      run: |
+        DEPLOY_KEY="${{ inputs.server_deploy_key }}"
+        PROXY_COMMAND="-o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}"
+        eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
+        ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
+        scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/run.sh} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh
