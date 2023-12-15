@@ -33,13 +33,13 @@ runs:
     - name: Set project env variables
       shell: bash
       run: |
-        echo "PROJECT_IMAGE=${{ inputs.registry }}/${{ github.repository }}" >> $GITHUB_ENV
-        PROJECT_VERSION=${{ inputs.version }} echo "PROJECT_VERSION=${PROJECT_VERSION:-$(git rev-parse --short HEAD)}" >> $GITHUB_ENV
-        echo PROJECT_SERVER_NAME=${{ inputs.project_domain_name }} >> $GITHUB_ENV
+        echo "PROJECT_IMAGE=${{ inputs.registry }}/${{ github.repository }}" >> ${{ runner.temp }}/.env.deploy
+        PROJECT_VERSION=${{ inputs.version }} echo "PROJECT_VERSION=${PROJECT_VERSION:-$(git rev-parse --short HEAD)}" >> ${{ runner.temp }}/.env.deploy
+        echo PROJECT_SERVER_NAME=${{ inputs.project_domain_name }} >> ${{ runner.temp }}/.env.deploy
     - name: Evaluate docker compose file
       shell: bash
       run: |
-        docker compose -f ${{ inputs.docker_compose_file }} config >> ${{ runner.temp }}/docker-compose.yml
+        docker compose -f ${{ inputs.docker_compose_file }} config --no-interpolate >> ${{ runner.temp }}/docker-compose.yml
     - name: Deploy
       shell: bash
       run: |
@@ -48,5 +48,5 @@ runs:
         eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
         ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
-        scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/run.sh} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/run.sh,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
         ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh

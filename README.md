@@ -2,6 +2,20 @@
 
 Deploys project to LXC instance.
 
+## Requirements
+
+This action require a docker-compose according to certain rules. The compose
+file will be given same environment variables as in the build action. The rest
+should be placed into deploy directory on the server, into the .env file.
+
+### Configuration
+
+#### `DEPLOY_KEY`
+
+This key is base64 encoded private key for ssh connection to the server. It needs
+to be added to the server as authorized key for root user. It also needs to be
+added to the **jumphost**.
+
 ## Usage in workflow
 
 This is an example of deployment to stage.
