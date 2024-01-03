@@ -28,6 +28,9 @@ inputs:
     description: "The name of the docker registry to pull from."
     required: true
     default: "ghcr.io"
+  external_network:
+    description: "Ensures that this docker external network is created for the project when deploying to the server."
+    required: false
 runs:
   using: "composite"
   steps:
@@ -38,6 +41,7 @@ runs:
         echo "PROJECT_IMAGE=${{ inputs.registry }}/${{ github.repository }}" >> ${{ runner.temp }}/.env.deploy
         PROJECT_VERSION=${{ inputs.version }} echo "PROJECT_VERSION=${PROJECT_VERSION:-$(git rev-parse --short HEAD)}" >> ${{ runner.temp }}/.env.deploy
         echo PROJECT_SERVER_NAME=${{ inputs.project_domain_name }} >> ${{ runner.temp }}/.env.deploy
+        if [[ -n "${{ inputs.external_network }}" ]]; then echo PROJECT_EXTERNAL_NETWORK=${{ inputs.external_network }} >> ${{ runner.temp }}/.env.deploy; fi
     - name: Evaluate docker compose file
       shell: bash
       run: |
