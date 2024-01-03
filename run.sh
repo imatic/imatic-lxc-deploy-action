@@ -15,7 +15,7 @@ docker compose ${ENV_FILES} pull
 docker compose ${ENV_FILES} down || true
 
 if [[ -n $PROJECT_EXTERNAL_NETWORK ]]; then
-    2>/dev/null 1>&2 docker network create --driver bridge --attachable --internal=false $PROJECT_EXTERNAL_NETWORK || true
+    2>/dev/null 1>&2 docker network create --driver bridge $PROJECT_EXTERNAL_NETWORK || true
 fi
 
 docker compose ${ENV_FILES} up -d --no-build --remove-orphans
