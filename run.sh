@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 source .env.deploy
 
-DOCKER_OPTIONS="--progress=quiet"
+DOCKER_OPTIONS="--progress=plain"
 ENV_FILES="--env-file .env.deploy --env-file .env"
 
 docker compose ${DOCKER_OPTIONS} ${ENV_FILES} pull
@@ -22,4 +22,4 @@ fi
 docker compose ${DOCKER_OPTIONS} ${ENV_FILES} up -d --no-build --remove-orphans
 
 # remove all unused images
-2>/dev/null 1>&2 docker rmi $(docker images -a) || true
+docker 2>/dev/null 1>&2 rmi $(docker images -a) || true
