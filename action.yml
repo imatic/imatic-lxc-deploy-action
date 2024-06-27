@@ -31,6 +31,16 @@ inputs:
   external_network:
     description: "Ensures that this docker external network is created for the project when deploying to the server."
     required: false
+  copy_files:
+    description: |-
+      List of files to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
+      
+      ```yaml
+      copy_files: >-
+        file-in-repository1:destination-file1
+        file-in-repository2:destination-file2
+      ```
+    required: false
 runs:
   using: "composite"
   steps:
@@ -55,4 +65,11 @@ runs:
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
         ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
         scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/run.sh,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        if [[ -n "${{ inputs.copy_files }}" ]]; then \
+          readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
+          for (( n=0; n < ${#files[*]}; n++)); do \
+            readarray -d : -t strarr <<< "${files[n]}" ; \
+            scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
+          done ; \
+        fi
         ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh
