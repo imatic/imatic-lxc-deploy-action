@@ -57,9 +57,11 @@ runs:
       run: |
         docker compose -f ${{ inputs.docker_compose_file }} config --no-interpolate --no-normalize --no-path-resolution >> ${{ runner.temp }}/docker-compose.yml
     - name: Remove env_file from all services
-      uses: mikefarah/yq@master
-      with:
-        cmd: yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
+      shell: bash
+      run: |
+        wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ${{ runner.temp }}/yq &&\
+        chmod +x ${{ runner.temp }}/yq
+        ${{ runner.temp }}/yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
     - name: Deploy
       shell: bash
       run: |
