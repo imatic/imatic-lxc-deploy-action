@@ -8,6 +8,10 @@ This action require a docker-compose according to certain rules. The compose
 file will be given same environment variables as in the build action. The rest
 should be placed into deploy directory on the server, into the .env file.
 
+Any references to `env_file` for services in docker-compose files will be
+**removed**. Use explicit passing of environment variables in docker-compose file.
+This removes the risk of passing variables to services which do not need them.
+
 ### Configuration
 
 #### `DEPLOY_KEY`

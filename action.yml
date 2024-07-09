@@ -34,7 +34,7 @@ inputs:
   copy_files:
     description: |-
       List of files to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
-      
+
       ```yaml
       copy_files: >-
         file-in-repository1:destination-file1
@@ -56,6 +56,10 @@ runs:
       shell: bash
       run: |
         docker compose -f ${{ inputs.docker_compose_file }} config --no-interpolate --no-normalize --no-path-resolution >> ${{ runner.temp }}/docker-compose.yml
+    - name: Remove env_file from all services
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
     - name: Deploy
       shell: bash
       run: |
