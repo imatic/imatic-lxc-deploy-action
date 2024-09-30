@@ -44,6 +44,7 @@ inputs:
   service:
     description: "The name of the service to deploy."
     required: false
+    default: ""
 runs:
   using: "composite"
   steps:
