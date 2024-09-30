@@ -41,6 +41,9 @@ inputs:
         file-in-repository2:destination-file2
       ```
     required: false
+  service:
+    description: "The name of the service to deploy."
+    required: false
 runs:
   using: "composite"
   steps:
@@ -78,4 +81,4 @@ runs:
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh ${{ inputs.service }} 
