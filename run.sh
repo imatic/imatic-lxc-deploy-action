@@ -19,7 +19,7 @@ if [[ -n "${PROJECT_EXTERNAL_NETWORK:-}" ]]; then
     docker 2>/dev/null 1>&2 network create --driver bridge $PROJECT_EXTERNAL_NETWORK || true
 fi
 
-docker compose ${DOCKER_OPTIONS} ${ENV_FILES} up -d --no-build --remove-orphans
+docker compose ${DOCKER_OPTIONS} ${ENV_FILES} up -d --no-build --remove-orphans $service
 
 # remove all unused images
 docker 2>/dev/null 1>&2 rmi $(docker images -a) || true
