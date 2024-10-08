@@ -15,6 +15,8 @@ ENV_FILES="--env-file .env.deploy --env-file .env"
 
 docker compose ${DOCKER_OPTIONS} ${ENV_FILES} pull --include-deps $service
 
+docker compose ${DOCKER_OPTIONS} ${ENV_FILES} down $service || true
+
 if [[ -n "${PROJECT_EXTERNAL_NETWORK:-}" ]]; then
     docker 2>/dev/null 1>&2 network create --driver bridge $PROJECT_EXTERNAL_NETWORK || true
 fi
