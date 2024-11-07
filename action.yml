@@ -70,7 +70,7 @@ runs:
         eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
         ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
-        scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/run.sh,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/Makefile,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
         if [[ -n "${{ inputs.copy_files }}" ]]; then \
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
@@ -78,4 +78,4 @@ runs:
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} ${{ inputs.server_deploy_dir }}/run.sh
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} "cd ${{ inputs.server_deploy_dir }}; make start"
