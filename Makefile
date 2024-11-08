@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
--include include/*
+-include tools/*/include.mk
 
 DOCKER_OPTIONS := --progress=plain --env-file .env.deploy --env-file .env
 
