@@ -69,6 +69,7 @@ runs:
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
             readarray -d : -t strarr <<< "${files[n]}" ; \
+            ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${strarr[1]})" ; \
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
