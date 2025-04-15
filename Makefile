@@ -19,4 +19,4 @@ start:
 	docker 2>/dev/null 1>&2 rmi $(docker images -a) || true
 
 compose:
-	docker compose $(ENV_FILES) $(filter-out $@,$(MAKECMDGOALS))
+	docker compose $(DOCKER_OPTIONS) $(filter-out $@,$(MAKECMDGOALS))
