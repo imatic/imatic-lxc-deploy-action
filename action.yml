@@ -72,7 +72,9 @@ runs:
         DEPLOY_KEY="${{ inputs.server_deploy_key }}"
         PROXY_COMMAND="-o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}"
         eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
+        echo "!!! 1 !!!"
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
+        echo "!!! 2 !!!"
         ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
         scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/Makefile,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
         if [[ -n "${{ inputs.copy_files }}" ]]; then \
@@ -83,4 +85,4 @@ runs:
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start"
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }}"
