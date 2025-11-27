@@ -87,4 +87,4 @@ runs:
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }}" DOWN_OPTIONS=${{ inputs.down_options }}"
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
