@@ -1,0 +1,54 @@
+name: Test generate-labels
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "generate-labels/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create minimal test compose file
+        run: |
+          cat > ${{ runner.temp }}/docker-compose.yml << 'EOF'
+          services:
+            app:
+              image: nginx
+          EOF
+
+      - name: Run generate-labels
+        id: labels
+        uses: ./generate-labels
+        with:
+          app_servers: "www.example.com stage.example.com"
+          labels_target: app
+          proxy_pass_port: "8080"
+          docker_compose_file: ${{ runner.temp }}/docker-compose.yml
+
+      - name: Print outputs
+        run: |
+          echo "=== labels_yml output ==="
+          echo "${{ steps.labels.outputs.labels_yml }}"
+          echo ""
+          echo "=== merged docker-compose.yml ==="
+          cat ${{ runner.temp }}/docker-compose.yml
+
+      - name: Validate labels were injected
+        run: |
+          actual=$(yq '.services.app.labels["imatic.server.serv1.server_name"]' ${{ runner.temp }}/docker-compose.yml)
+          expected="www.example.com"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "FAIL: expected '$expected', got '$actual'"
+            exit 1
+          fi
+          actual=$(yq '.services.app.labels["imatic.server.serv2.server_name"]' ${{ runner.temp }}/docker-compose.yml)
+          expected="stage.example.com"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "FAIL: expected '$expected', got '$actual'"
+            exit 1
+          fi
+          echo "OK: all labels present and correct"

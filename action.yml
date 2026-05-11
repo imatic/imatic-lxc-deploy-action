@@ -92,21 +92,12 @@ runs:
         ${{ runner.temp }}/yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
     - name: Generate imatic.server labels
       if: ${{ inputs.app_servers != '' }}
-      shell: bash
-      run: |
-        LABELS_FILE="${{ runner.temp }}/labels.yml"
-        printf "labels:\n" > "$LABELS_FILE"
-        read -ra app_servers <<< "${{ inputs.app_servers }}"
-        for i in "${!app_servers[@]}"; do
-          n=$((i + 1))
-          printf "  \"imatic.server.serv%d.server_name\": \"%s\"\n" $n "${app_servers[$i]}" >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.name\": \"/\"\n" $n >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.port\": ${{ inputs.proxy_pass_port }}\n" $n >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.protocol\": \"http\"\n" $n >> "$LABELS_FILE"
-        done
-        ${{ runner.temp }}/yq -i \
-          ".services.${{ inputs.labels_target }}.labels = load(\"$LABELS_FILE\").labels" \
-          ${{ runner.temp }}/docker-compose.yml
+      uses: ./generate-labels
+      with:
+        app_servers: ${{ inputs.app_servers }}
+        labels_target: ${{ inputs.labels_target }}
+        proxy_pass_port: ${{ inputs.proxy_pass_port }}
+        docker_compose_file: ${{ runner.temp }}/docker-compose.yml
     - name: Deploy
       shell: bash
       run: |

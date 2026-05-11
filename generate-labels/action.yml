@@ -1,0 +1,54 @@
+name: "Generate imatic.server labels"
+description: "Generates imatic.server Docker labels and injects them into a compose file."
+inputs:
+  app_servers:
+    description: "Space-separated list of domain names to generate labels for."
+    required: true
+  docker_compose_file:
+    description: "Path to the docker-compose.yml file to inject labels into."
+    required: true
+  labels_target:
+    description: "The compose service to inject the generated labels into."
+    required: false
+    default: "app"
+  proxy_pass_port:
+    description: "The proxy_pass port used in the generated labels."
+    required: false
+    default: "8080"
+outputs:
+  labels_yml:
+    description: "The generated labels as a YAML string."
+    value: ${{ steps.generate.outputs.labels_yml }}
+runs:
+  using: "composite"
+  steps:
+    - name: Download yq
+      shell: bash
+      run: |
+        YQ="${{ runner.temp }}/yq"
+        if [[ ! -x "$YQ" ]]; then
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O "$YQ"
+          chmod +x "$YQ"
+        fi
+    - name: Generate and inject labels
+      id: generate
+      shell: bash
+      run: |
+        LABELS_FILE="${{ runner.temp }}/labels.yml"
+        printf "labels:\n" > "$LABELS_FILE"
+        read -ra app_servers <<< "${{ inputs.app_servers }}"
+        for i in "${!app_servers[@]}"; do
+          n=$((i + 1))
+          printf "  \"imatic.server.serv%d.server_name\": \"%s\"\n" $n "${app_servers[$i]}" >> "$LABELS_FILE"
+          printf "  \"imatic.server.serv%d.location.loc1.name\": \"/\"\n" $n >> "$LABELS_FILE"
+          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.port\": ${{ inputs.proxy_pass_port }}\n" $n >> "$LABELS_FILE"
+          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.protocol\": \"http\"\n" $n >> "$LABELS_FILE"
+        done
+        ${{ runner.temp }}/yq -i \
+          ".services.${{ inputs.labels_target }}.labels = load(\"$LABELS_FILE\").labels" \
+          "${{ inputs.docker_compose_file }}"
+        {
+          echo "labels_yml<<EOF"
+          cat "$LABELS_FILE"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
