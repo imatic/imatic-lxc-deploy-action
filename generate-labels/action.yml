@@ -39,10 +39,10 @@ runs:
         read -ra app_servers <<< "${{ inputs.app_servers }}"
         for i in "${!app_servers[@]}"; do
           n=$((i + 1))
-          printf "  \"imatic.server.serv%d.server_name\": \"%s\"\n" $n "${app_servers[$i]}" >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.name\": \"/\"\n" $n >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.port\": ${{ inputs.proxy_pass_port }}\n" $n >> "$LABELS_FILE"
-          printf "  \"imatic.server.serv%d.location.loc1.block.proxy_pass.protocol\": \"http\"\n" $n >> "$LABELS_FILE"
+          printf "  imatic.server.serv%d.server_name: %s\n" $n "${app_servers[$i]}" >> "$LABELS_FILE"
+          printf "  imatic.server.serv%d.location.loc1.name: /\n" $n >> "$LABELS_FILE"
+          printf "  imatic.server.serv%d.location.loc1.block.proxy_pass.port: ${{ inputs.proxy_pass_port }}\n" $n >> "$LABELS_FILE"
+          printf "  imatic.server.serv%d.location.loc1.block.proxy_pass.protocol: http\n" $n >> "$LABELS_FILE"
         done
         ${{ runner.temp }}/yq -i \
           ".services.${{ inputs.labels_target }}.labels = load(\"$LABELS_FILE\").labels" \
