@@ -71,3 +71,25 @@ jobs:
           registry: ${{ env.REGISTRY }}
           version: ${{ inputs.version }}
 ```
+
+## Features
+
+**Core deployment**
+- Deploys a Docker Compose stack to an LXC server over SSH via a jumphost
+- Evaluates the compose file before deploying (resolves includes/anchors)
+- Strips `env_file` entries from all services before deploy
+
+**Configuration**
+- Configurable registry (default: `ghcr.io`), image tag (`version`), and compose file path
+- Targets a specific service or all services (`service` input)
+- Supports `docker compose down` options (e.g. `--remove-orphans`, `--volumes`)
+- Creates an external Docker network if specified (`external_network`)
+
+**File copying**
+- Copies arbitrary files from the repository to the server before deploy (`copy_files` — colon-separated `source:destination` pairs)
+
+**Label generation**
+- Generates `imatic.server.*` Docker labels from a list of domain names (`app_servers`)
+- Injects labels into a target service (`labels_target`, default: `app`)
+- Configurable proxy port (`proxy_pass_port`, default: `8080`)
+- Implemented as a composable sub-action (`generate-labels/`) — independently testable and removable
