@@ -92,12 +92,14 @@ runs:
         ${{ runner.temp }}/yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
     - name: Generate imatic.server labels
       if: ${{ inputs.app_servers != '' }}
-      uses: imatic/imatic-lxc-deploy-action/generate-labels@${{ github.action_ref }}
-      with:
-        app_servers: ${{ inputs.app_servers }}
-        labels_target: ${{ inputs.labels_target }}
-        proxy_pass_port: ${{ inputs.proxy_pass_port }}
-        docker_compose_file: ${{ runner.temp }}/docker-compose.yml
+      shell: bash
+      env:
+        APP_SERVERS: ${{ inputs.app_servers }}
+        LABELS_TARGET: ${{ inputs.labels_target }}
+        PROXY_PASS_PORT: ${{ inputs.proxy_pass_port }}
+        DOCKER_COMPOSE_FILE: ${{ runner.temp }}/docker-compose.yml
+        YQ: ${{ runner.temp }}/yq
+      run: ${{ github.action_path }}/bin/generate-labels.sh
     - name: Deploy
       shell: bash
       run: |
