@@ -88,6 +88,9 @@ jobs:
 **File copying**
 - Copies arbitrary files from the repository to the server before deploy (`copy_files` — colon-separated `source:destination` pairs)
 
+**Post-deploy hook**
+- Runs an arbitrary `make` target on the server after `make start` succeeds (`post_deploy_make_target`)
+
 **Label generation**
 - Generates `imatic.server.*` Docker labels from a list of domain names (`app_servers`)
 - Injects labels into a target service (`labels_target`, default: `app`)
