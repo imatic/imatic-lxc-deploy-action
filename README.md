@@ -92,4 +92,4 @@ jobs:
 - Generates `imatic.server.*` Docker labels from a list of domain names (`app_servers`)
 - Injects labels into a target service (`labels_target`, default: `app`)
 - Configurable proxy port (`proxy_pass_port`, default: `8080`)
-- Implemented as a composable sub-action (`generate-labels/`) — independently testable and removable
+- Implemented as a separate script (`generate-labels/`) — independently testable and removable
