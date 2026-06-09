@@ -49,6 +49,10 @@ inputs:
     description: "Options for `docker compose down` command"
     required: false
     default: ""
+  post_deploy_make_target:
+    description: "Make target to run on the server after `make start` succeeds."
+    required: false
+    default: ""
   app_servers:
     description: |-
       Space-separated list of domain names to generate imatic.server labels for.
@@ -117,4 +121,8 @@ runs:
             scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
+        SSH_CMD="which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
+        if [[ -n "${{ inputs.post_deploy_make_target }}" ]]; then
+          SSH_CMD="${SSH_CMD} && make ${{ inputs.post_deploy_make_target }}"
+        fi
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} "${SSH_CMD}"
