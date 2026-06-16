@@ -33,13 +33,15 @@ inputs:
     required: false
   copy_files:
     description: |-
-      List of files to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
+      List of files or directories to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
 
       ```yaml
       copy_files: >-
         file-in-repository1:destination-file1
-        file-in-repository2:destination-file2
+        dir-in-repository:destination-dir
       ```
+
+      When source is a directory, its contents are copied into the destination directory.
     required: false
   service:
     description: "The name of the service to deploy."
@@ -117,8 +119,15 @@ runs:
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
             readarray -d : -t strarr <<< "${files[n]}" ; \
-            ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${strarr[1]})" ; \
-            scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
+            src="${strarr[0]}" ; \
+            dest="${strarr[1]%$'\n'}" ; \
+            if [[ -d "${src}" ]]; then \
+              ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p ${{ inputs.server_deploy_dir }}/${dest}" ; \
+              scp -r ${PROXY_COMMAND} "${src}/." ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest}/ ; \
+            else \
+              ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${dest})" ; \
+              scp ${PROXY_COMMAND} "${src}" ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest} ; \
+            fi ; \
           done ; \
         fi
         SSH_CMD="which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
