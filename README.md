@@ -86,7 +86,8 @@ jobs:
 - Creates an external Docker network if specified (`external_network`)
 
 **File copying**
-- Copies arbitrary files from the repository to the server before deploy (`copy_files` — colon-separated `source:destination` pairs)
+- Copies arbitrary files or directories from the repository to the server before deploy (`copy_files` — space-separated `source:destination` pairs)
+- Directories are copied recursively using rsync (contents of source → destination); single files use scp
 
 **Post-deploy hook**
 - Runs an arbitrary `make` target on the server after `make start` succeeds (`post_deploy_make_target`)
