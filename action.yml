@@ -119,11 +119,11 @@ runs:
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
             readarray -d : -t strarr <<< "${files[n]}" ; \
-            src="${strarr[0]}" ; \
-            dest="${strarr[1]%$'\n'}" ; \
+            src="${strarr[0]//[$'\t\r\n ']/}" ; \
+            dest="${strarr[1]//[$'\t\r\n ']/}" ; \
             if [[ -d "${src}" ]]; then \
               ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p ${{ inputs.server_deploy_dir }}/${dest}" ; \
-              scp -r ${PROXY_COMMAND} "${src}/." ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest}/ ; \
+              rsync -az -e "ssh -o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}" "${src}/" ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest}/ ; \
             else \
               ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${dest})" ; \
               scp ${PROXY_COMMAND} "${src}" ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest} ; \
