@@ -75,6 +75,10 @@ inputs:
     description: "The proxy_pass port used in the generated labels."
     required: false
     default: "8080"
+  image_keep_n:
+    description: "Number of most recent PROJECT_IMAGE versions to keep on the server. Older versions are removed before pulling the new one."
+    required: false
+    default: "1"
 runs:
   using: "composite"
   steps:
@@ -113,8 +117,9 @@ runs:
         PROXY_COMMAND="-o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}"
         eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}/bin
         scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/Makefile,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        scp ${PROXY_COMMAND} ${{ github.action_path }}/bin/docker-cleanup.sh ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/bin/docker-cleanup.sh
         if [[ -n "${{ inputs.copy_files }}" ]]; then \
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
@@ -130,7 +135,7 @@ runs:
             fi ; \
           done ; \
         fi
-        SSH_CMD="which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
+        SSH_CMD="which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make cleanup IMAGE_KEEP_N=${{ inputs.image_keep_n }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
         if [[ -n "${{ inputs.post_deploy_make_target }}" ]]; then
           SSH_CMD="${SSH_CMD} && make ${{ inputs.post_deploy_make_target }}"
         fi

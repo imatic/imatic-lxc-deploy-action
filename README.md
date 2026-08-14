@@ -89,6 +89,10 @@ jobs:
 - Copies arbitrary files or directories from the repository to the server before deploy (`copy_files` — space-separated `source:destination` pairs)
 - Directories are copied recursively using rsync (contents of source → destination); single files use scp
 
+**Image cleanup**
+- Before pulling, removes older versions of any images we build (repositories whose name starts with `PROJECT_IMAGE`, e.g. the `-dbtools` variant), keeping the latest plus `image_keep_n` previous versions (default: `1` — i.e. the version currently running plus the one before it); 3rd-party images are left untouched
+- Runs once per deploy, not on every `make start` (e.g. a manual restart after `down` won't trigger it)
+
 **Post-deploy hook**
 - Runs an arbitrary `make` target on the server after `make start` succeeds (`post_deploy_make_target`)
 
