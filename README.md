@@ -90,7 +90,10 @@ jobs:
 - Directories are copied recursively using rsync (contents of source → destination); single files use scp
 
 **Image cleanup**
-- Before pulling, removes older versions of any images we build (repositories whose name starts with `PROJECT_IMAGE`, e.g. the `-dbtools` variant), keeping the latest plus `image_keep_n` previous versions (default: `1` — i.e. the version currently running plus the one before it); 3rd-party images are left untouched
+- Before pulling, removes older versions of any images we build (repositories whose name starts with `PROJECT_IMAGE`, e.g. the `-dbtools` variant) to free disk space, keeping only the `image_keep_n` most recent ones — so after the pull the server holds the deployed version plus `image_keep_n` previous versions (default: `1`); 3rd-party images are left untouched
+- Images used by any container are never removed (e.g. the running version after a rollback to an older build)
+- Redeploying the same version pulls nothing new, so only `image_keep_n` versions remain afterwards
+- A cleanup failure doesn't fail the deploy
 - Runs once per deploy, not on every `make start` (e.g. a manual restart after `down` won't trigger it)
 
 **Post-deploy hook**

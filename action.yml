@@ -76,7 +76,7 @@ inputs:
     required: false
     default: "8080"
   image_keep_n:
-    description: "Number of most recent PROJECT_IMAGE versions to keep on the server. Older versions are removed before pulling the new one."
+    description: "Number of previous PROJECT_IMAGE versions to keep on the server besides the deployed one. Older versions are removed before pulling the new one to free disk space."
     required: false
     default: "1"
 runs:
