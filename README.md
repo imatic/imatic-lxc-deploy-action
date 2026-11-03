@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy
-        uses: imatic/imatic-lxc-deploy-action
+        uses: imatic/imatic-lxc-deploy-action@dev
         with:
           server: "root@${{ env.PROJECT }}-stage.lxc.imatic.cz"
           server_deploy_key: ${{ secrets.DEPLOY_KEY }}
@@ -80,27 +80,76 @@ jobs:
 - Strips `env_file` entries from all services before deploy
 
 **Configuration**
-- Configurable registry (default: `ghcr.io`), image tag (`version`), and compose file path
-- Targets a specific service or all services (`service` input)
-- Supports `docker compose down` options (e.g. `--remove-orphans`, `--volumes`)
-- Creates an external Docker network if specified (`external_network`)
+- Custom registry, image tag, compose file(s), single service, `docker compose down` options and external network
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    registry: ghcr.io
+    version: ${{ inputs.version }}
+    docker_compose_file: .docker/docker-compose.yml -f .docker/docker-compose.prod.yml
+    service: app
+    down_options: --remove-orphans
+    external_network: my-network
+```
 
 **File copying**
-- Copies arbitrary files or directories from the repository to the server before deploy (`copy_files` — space-separated `source:destination` pairs)
-- Directories are copied recursively using rsync (contents of source → destination); single files use scp
+- Copies files or directories from the repository to the server before deploy (`source:destination`, relative to `server_deploy_dir`)
+- Directory contents are copied into the destination directory
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    copy_files: >-
+      path/to/file.conf:destination/file.conf
+      path/to/directory:destination/directory
+```
 
 **Image cleanup**
-- Before pulling, removes older versions of any images we build (repositories whose name starts with `PROJECT_IMAGE`, e.g. the `-dbtools` variant) to free disk space, keeping only the `image_keep_n` most recent ones — so after the pull the server holds the deployed version plus `image_keep_n` previous versions (default: `1`); 3rd-party images are left untouched
-- Images used by any container are never removed (e.g. the running version after a rollback to an older build)
+- Runs automatically before pulling, to free disk space
+- Removes old versions of project images (repositories starting with `PROJECT_IMAGE`, e.g. the `-dbtools` variant); after the deploy the server holds the deployed version plus `image_keep_n` previous ones
+- Images used by any container are never removed; 3rd-party images are left untouched
 - Redeploying the same version pulls nothing new, so only `image_keep_n` versions remain afterwards
 - A cleanup failure doesn't fail the deploy
-- Runs once per deploy, not on every `make start` (e.g. a manual restart after `down` won't trigger it)
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    image_keep_n: 2 # default: 1
+```
 
 **Post-deploy hook**
-- Runs an arbitrary `make` target on the server after `make start` succeeds (`post_deploy_make_target`)
+- Runs a project `make` target on the server after `make start` succeeds (e.g. defined in a copied `tools/*/include.mk`)
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    post_deploy_make_target: post_deploy
+```
 
 **Label generation**
-- Generates `imatic.server.*` Docker labels from a list of domain names (`app_servers`)
-- Injects labels into a target service (`labels_target`, default: `app`)
-- Configurable proxy port (`proxy_pass_port`, default: `8080`)
-- Implemented as a separate script (`generate-labels/`) — independently testable and removable
+- Generates `imatic.server.*` Docker labels for the LXC proxy from a list of domain names and injects them into a compose service
+- Implemented as a separate script (`bin/generate-labels.sh`) — independently testable and removable
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    app_servers: >-
+      www.example.com
+      example.com
+    labels_target: app # default: app
+    proxy_pass_port: 8080 # default: 8080
+```
+
+## Make targets
+
+Available on the server in `server_deploy_dir`:
+
+- `make start [SERVICE=...] [DOWN_OPTIONS=...]` — pull images, recreate and start the stack (or a single service)
+- `make docker-cleanup [IMAGE_KEEP_N=1]` — remove old versions of project images, keeping the `IMAGE_KEEP_N` most recent
+- `make compose <args>` — run any `docker compose` command with the deploy env files (e.g. `make compose ps`)

@@ -7,7 +7,7 @@ SERVICE ?=
 DOWN_OPTIONS ?=
 IMAGE_KEEP_N ?= 1
 
-.PHONY: compose start cleanup
+.PHONY: compose start docker-cleanup
 
 start:
 	docker compose $(DOCKER_OPTIONS) pull --include-deps $(SERVICE)
@@ -19,7 +19,7 @@ start:
 
 	docker compose $(DOCKER_OPTIONS) up -d --no-build --remove-orphans $(SERVICE)
 
-cleanup:
+docker-cleanup:
 	source .env.deploy && PROJECT_IMAGE=$$PROJECT_IMAGE bin/docker-cleanup.sh $(IMAGE_KEEP_N)
 
 compose:
