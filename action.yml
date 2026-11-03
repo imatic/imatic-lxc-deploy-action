@@ -33,13 +33,15 @@ inputs:
     required: false
   copy_files:
     description: |-
-      List of files to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
+      List of files or directories to copy from repository to server. GitHub doesn't support array yet, so it is specified as a string.
 
       ```yaml
       copy_files: >-
         file-in-repository1:destination-file1
-        file-in-repository2:destination-file2
+        dir-in-repository:destination-dir
       ```
+
+      When source is a directory, its contents are copied into the destination directory.
     required: false
   service:
     description: "The name of the service to deploy."
@@ -49,6 +51,34 @@ inputs:
     description: "Options for `docker compose down` command"
     required: false
     default: ""
+  post_deploy_make_target:
+    description: "Make target to run on the server after `make start` succeeds."
+    required: false
+    default: ""
+  app_servers:
+    description: |-
+      Space-separated list of domain names to generate imatic.server labels for.
+      Labels are injected into the service specified by `labels_target`.
+
+      ```yaml
+      app_servers: >-
+        www.example.com
+        stage.example.com
+      ```
+    required: false
+    default: ""
+  labels_target:
+    description: "The compose service to inject the generated domain labels into."
+    required: false
+    default: "app"
+  proxy_pass_port:
+    description: "The proxy_pass port used in the generated labels."
+    required: false
+    default: "8080"
+  image_keep_n:
+    description: "Number of previous PROJECT_IMAGE versions to keep on the server besides the deployed one. Older versions are removed before pulling the new one to free disk space."
+    required: false
+    default: "1"
 runs:
   using: "composite"
   steps:
@@ -70,6 +100,16 @@ runs:
         wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ${{ runner.temp }}/yq &&\
         chmod +x ${{ runner.temp }}/yq
         ${{ runner.temp }}/yq -i 'del(.services.*.env_file)' ${{ runner.temp }}/docker-compose.yml
+    - name: Generate imatic.server labels
+      if: ${{ inputs.app_servers != '' }}
+      shell: bash
+      env:
+        APP_SERVERS: ${{ inputs.app_servers }}
+        LABELS_TARGET: ${{ inputs.labels_target }}
+        PROXY_PASS_PORT: ${{ inputs.proxy_pass_port }}
+        DOCKER_COMPOSE_FILE: ${{ runner.temp }}/docker-compose.yml
+        YQ: ${{ runner.temp }}/yq
+      run: ${{ github.action_path }}/bin/generate-labels.sh
     - name: Deploy
       shell: bash
       run: |
@@ -77,14 +117,26 @@ runs:
         PROXY_COMMAND="-o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}"
         eval "$(ssh-agent)" && echo "${DEPLOY_KEY}" | base64 -d | ssh-add -
         ssh -o StrictHostKeyChecking=no ${{ inputs.server_jumphost }} "hostname"
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} mkdir -p ${{ inputs.server_deploy_dir }}/bin
         scp ${PROXY_COMMAND} {${{ runner.temp }}/docker-compose.yml,${{ github.action_path }}/Makefile,${{ runner.temp}}/.env.deploy} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}
+        scp ${PROXY_COMMAND} ${{ github.action_path }}/bin/docker-cleanup.sh ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/bin/docker-cleanup.sh
         if [[ -n "${{ inputs.copy_files }}" ]]; then \
           readarray -d " " -t files <<< "${{ inputs.copy_files }}" ; \
           for (( n=0; n < ${#files[*]}; n++)); do \
             readarray -d : -t strarr <<< "${files[n]}" ; \
-            ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${strarr[1]})" ; \
-            scp ${PROXY_COMMAND} ${strarr[0]} ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${strarr[1]} ; \
+            src="${strarr[0]//[$'\t\r\n ']/}" ; \
+            dest="${strarr[1]//[$'\t\r\n ']/}" ; \
+            if [[ -d "${src}" ]]; then \
+              ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p ${{ inputs.server_deploy_dir }}/${dest}" ; \
+              rsync -az -e "ssh -o StrictHostKeyChecking=no -J ${{ inputs.server_jumphost }}" "${src}/" ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest}/ ; \
+            else \
+              ssh ${PROXY_COMMAND} ${{ inputs.server }} "mkdir -p $(dirname ${{ inputs.server_deploy_dir }}/${dest})" ; \
+              scp ${PROXY_COMMAND} "${src}" ${{ inputs.server }}:${{ inputs.server_deploy_dir }}/${dest} ; \
+            fi ; \
           done ; \
         fi
-        ssh ${PROXY_COMMAND} ${{ inputs.server }} "which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
+        SSH_CMD="which make 2>/dev/null || apt-get install make; cd ${{ inputs.server_deploy_dir }}; make docker-cleanup IMAGE_KEEP_N=${{ inputs.image_keep_n }}; make start SERVICE=${{ inputs.service }} DOWN_OPTIONS=${{ inputs.down_options }}"
+        if [[ -n "${{ inputs.post_deploy_make_target }}" ]]; then
+          SSH_CMD="${SSH_CMD} && make ${{ inputs.post_deploy_make_target }}"
+        fi
+        ssh ${PROXY_COMMAND} ${{ inputs.server }} "${SSH_CMD}"

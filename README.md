@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy
-        uses: imatic/imatic-lxc-deploy-action
+        uses: imatic/imatic-lxc-deploy-action@dev
         with:
           server: "root@${{ env.PROJECT }}-stage.lxc.imatic.cz"
           server_deploy_key: ${{ secrets.DEPLOY_KEY }}
@@ -71,3 +71,85 @@ jobs:
           registry: ${{ env.REGISTRY }}
           version: ${{ inputs.version }}
 ```
+
+## Features
+
+**Core deployment**
+- Deploys a Docker Compose stack to an LXC server over SSH via a jumphost
+- Evaluates the compose file before deploying (resolves includes/anchors)
+- Strips `env_file` entries from all services before deploy
+
+**Configuration**
+- Custom registry, image tag, compose file(s), single service, `docker compose down` options and external network
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    registry: ghcr.io
+    version: ${{ inputs.version }}
+    docker_compose_file: .docker/docker-compose.yml -f .docker/docker-compose.prod.yml
+    service: app
+    down_options: --remove-orphans
+    external_network: my-network
+```
+
+**File copying**
+- Copies files or directories from the repository to the server before deploy (`source:destination`, relative to `server_deploy_dir`)
+- Directory contents are copied into the destination directory
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    copy_files: >-
+      path/to/file.conf:destination/file.conf
+      path/to/directory:destination/directory
+```
+
+**Image cleanup**
+- Runs automatically before pulling, to free disk space
+- Removes old versions of project images (repositories starting with `PROJECT_IMAGE`, e.g. the `-dbtools` variant); after the deploy the server holds the deployed version plus `image_keep_n` previous ones
+- Images used by any container are never removed; 3rd-party images are left untouched
+- Redeploying the same version pulls nothing new, so only `image_keep_n` versions remain afterwards
+- A cleanup failure doesn't fail the deploy
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    image_keep_n: 2 # default: 1
+```
+
+**Post-deploy hook**
+- Runs a project `make` target on the server after `make start` succeeds (e.g. defined in a copied `tools/*/include.mk`)
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    post_deploy_make_target: post_deploy
+```
+
+**Label generation**
+- Generates `imatic.server.*` Docker labels for the LXC proxy from a list of domain names and injects them into a compose service
+- Implemented as a separate script (`bin/generate-labels.sh`) — independently testable and removable
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@dev
+  with:
+    # ...
+    app_servers: >-
+      www.example.com
+      example.com
+    labels_target: app # default: app
+    proxy_pass_port: 8080 # default: 8080
+```
+
+## Make targets
+
+Available on the server in `server_deploy_dir`:
+
+- `make start [SERVICE=...] [DOWN_OPTIONS=...]` — pull images, recreate and start the stack (or a single service)
+- `make docker-cleanup [IMAGE_KEEP_N=1]` — remove old versions of project images, keeping the `IMAGE_KEEP_N` most recent
+- `make compose <args>` — run any `docker compose` command with the deploy env files (e.g. `make compose ps`)
