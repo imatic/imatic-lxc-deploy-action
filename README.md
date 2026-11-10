@@ -122,12 +122,15 @@ jobs:
 ```
 
 **Post-deploy hook**
-- Runs a project `make` target on the server after `make start` succeeds (e.g. defined in a copied `tools/*/include.mk`)
+- Runs a project `make` target on the server after `make start` succeeds
+- The target must be defined in a makefile copied to the server via `copy_files` as `tools/<name>/include.mk` — keep it versioned in the project rather than adding it manually on the host
 
 ```yaml
 - uses: imatic/imatic-lxc-deploy-action@dev
   with:
     # ...
+    copy_files: >-
+      .docker/Makefile.stage:tools/local/include.mk
     post_deploy_make_target: post_deploy
 ```
 
