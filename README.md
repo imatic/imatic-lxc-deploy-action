@@ -72,6 +72,12 @@ jobs:
           version: ${{ inputs.version }}
 ```
 
+**Pin a version** – `@dev` follows the latest changes; for stable deploys pin a release tag or commit SHA:
+
+```yaml
+- uses: imatic/imatic-lxc-deploy-action@v0.1.0
+```
+
 ## Features
 
 **Core deployment**
